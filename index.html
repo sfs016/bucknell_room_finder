@@ -169,6 +169,7 @@
             gap: 5px;
             margin-bottom: 1.5rem;
             position: relative;
+            width: 100%;
         }
 
         .logo {
@@ -212,8 +213,7 @@
         .theme-toggle {
             position: absolute;
             right: 0;
-            top: 50%;
-            transform: translateY(-50%);
+            top: 0;
             background: none;
             border: none;
             font-size: 1.5rem;
@@ -281,6 +281,15 @@
                 margin-left: 0;
                 margin-right: 0;
                 border-radius: 8px;
+            }
+            .logo-container {
+                flex-direction: column;
+                padding-right: 40px;
+            }
+
+            .theme-toggle {
+                top: 0;
+                right: 5px;
             }
         }
     </style>
