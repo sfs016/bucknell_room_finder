@@ -346,7 +346,6 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0" id="selectedRoom">Select a building and room to view availability</h5>
-                        <span class="badge bg-light text-dark" id="dateDisplay"></span>
                     </div>
                     <div class="card-body">
                         <div id="scheduleGrid" class="schedule-grid"></div>
@@ -375,11 +374,6 @@
     <!-- Date display script and dark mode toggle -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Display current date
-            const dateDisplay = document.getElementById('dateDisplay');
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            dateDisplay.textContent = new Date().toLocaleDateString('en-US', options);
-
             // Dark mode toggle
             const themeToggle = document.getElementById('themeToggle');
             const icon = themeToggle.querySelector('i');
