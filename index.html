@@ -243,18 +243,50 @@
 
         @media (max-width: 576px) {
             .schedule-grid {
-                font-size: 0.7rem;
-                grid-template-columns: 70px repeat(5, 1fr);
+                font-size: 0.6rem;
+                grid-template-columns: 45px repeat(5, 1fr);
+                width: 100%;
+                overflow-x: hidden;
+                margin-left: 0;
+                margin-right: 0;
             }
             .time-slot {
-                font-size: 0.65rem;
+                font-size: 0.6rem;
                 padding: 5px 0;
+            }
+            .schedule-grid > div {
+                padding: 2px 1px;
+                min-height: 28px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .card-body {
+                padding: 0.75rem 0.5rem;
+            }
+            .container-fluid {
+                padding-left: 5px;
+                padding-right: 5px;
+            }
+            h5 {
+                font-size: 1rem;
+            }
+            #dateDisplay {
+                font-size: 0.7rem;
+            }
+            .occupied {
+                font-size: 0.6rem;
+            }
+            .card {
+                margin-left: 0;
+                margin-right: 0;
+                border-radius: 8px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container mt-4 mb-5">
+    <div class="container-fluid container-lg mt-4 mb-5">
         <div class="logo-container">
             <h1 class="mb-0">
                 <span class="bucknell-blue">Bucknell</span>
