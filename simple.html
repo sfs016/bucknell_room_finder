@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Room Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .bucknell-blue {
+            color: #004B98;
+        }
+        .bucknell-orange {
+            color: #FF7F32;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center bucknell-blue mb-4">Bucknell Room Finder (Simple)</h1>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col">
+                        <label for="buildingSelect" class="form-label">Select Building</label>
+                        <select id="buildingSelect" class="form-select">
+                            <option value="">Loading buildings...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <label for="roomSelect" class="form-label">Select Room</label>
+                        <select id="roomSelect" class="form-select" disabled>
+                            <option value="">Select a building first</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-3" id="statusMessage">
+                    Loading data...
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                Debug Information
+            </div>
+            <div class="card-body">
+                <h5>Selected Room</h5>
+                <pre id="roomDebug">No room selected</pre>
+
+                <h5>Matching Courses</h5>
+                <pre id="coursesDebug">No courses found</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global data storage
+        let buildings = [];
+        let roomsByBuilding = {};
+        let courseData = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            const statusMessage = document.getElementById('statusMessage');
+            const buildingSelect = document.getElementById('buildingSelect');
+            const roomSelect = document.getElementById('roomSelect');
+
+            // Set up event listeners
+            buildingSelect.addEventListener('change', handleBuildingChange);
+            roomSelect.addEventListener('change', handleRoomChange);
+
+            try {
+                // Load buildings
+                statusMessage.textContent = 'Loading building data...';
+                const buildingsResponse = await fetch('buildings.json');
+                buildings = await buildingsResponse.json();
+                statusMessage.textContent = `Loaded ${buildings.length} buildings.`;
+
+                // Load course data
+                statusMessage.textContent = 'Loading course data...';
+                const courseResponse = await fetch('courseinformation 2025 (2).csv');
+                const courseText = await courseResponse.text();
+                courseData = parseCSV(courseText);
+                statusMessage.textContent = `Loaded ${courseData.length} courses.`;
+
+                // Process rooms from course data
+                statusMessage.textContent = 'Processing room data...';
+                await processRoomsFromCourses();
+
+                // Populate building dropdown
+                populateBuildingDropdown();
+            } catch (error) {
+                statusMessage.textContent = `Error: ${error.message}`;
+                console.error('Error:', error);
+            }
+        });
+
+        // Parse CSV
+        function parseCSV(csvText) {
+            try {
+                // Split into lines and remove empty lines
+                const lines = csvText.split('\n').filter(line => line.trim());
+                console.log(`CSV has ${lines.length} lines`);
+
+                // Find header line that contains location columns
+                const headerLine = lines.find(line =>
+                    line.includes('Meetings/0/Location') &&
+                    line.includes('Id,Term,Crn,Subj'));
+
+                if (!headerLine) {
+                    throw new Error('Could not find header row in CSV');
+                }
+
+                const headers = headerLine.split(',');
+                const headerIndex = lines.indexOf(headerLine);
+
+                // Find important column indices
+                const location1Index = headers.indexOf('Meetings/0/Location');
+                const location2Index = headers.indexOf('Meetings/1/Location');
+                const subjectIndex = headers.indexOf('Subj');
+                const numberIndex = headers.indexOf('Number');
+
+                console.log('CSV column indices:', {
+                    location1: location1Index,
+                    location2: location2Index,
+                    subject: subjectIndex,
+                    number: numberIndex
+                });
+
+                // Parse data
+                const data = [];
+                for (let i = headerIndex + 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+
+                    const values = line.split(',');
+
+                    // Extract basic course info
+                    const course = {
+                        id: values[0] || '',
+                        Subj: subjectIndex >= 0 ? values[subjectIndex] : '',
+                        Number: numberIndex >= 0 ? values[numberIndex] : '',
+                        'Meetings/0/Location': location1Index >= 0 ? values[location1Index].replace(/"/g, '').trim() : '',
+                        'Meetings/1/Location': location2Index >= 0 ? values[location2Index].replace(/"/g, '').trim() : ''
+                    };
+
+                    data.push(course);
+                }
+
+                console.log(`Parsed ${data.length} courses from CSV`);
+                if (data.length > 0) {
+                    console.log('Sample course:', data[0]);
+                }
+
+                return data;
+            } catch (error) {
+                console.error('Error parsing CSV:', error);
+                return [];
+            }
+        }
+
+        // Process rooms from courses
+        async function processRoomsFromCourses() {
+            const statusMessage = document.getElementById('statusMessage');
+
+            // Initialize room storage
+            buildings.forEach(building => {
+                roomsByBuilding[building.Code] = new Set();
+            });
+
+            // Process each course
+            let roomCount = 0;
+            courseData.forEach(course => {
+                // Process both meeting locations
+                ['Meetings/0/Location', 'Meetings/1/Location'].forEach(locKey => {
+                    const location = course[locKey];
+                    if (!location || location.trim() === '') return;
+
+                    // Extract building code and room number
+                    const parts = location.trim().split(' ');
+                    if (parts.length < 2) return;
+
+                    const buildingCode = parts[0];
+                    const roomNumber = parts.slice(1).join(' ');
+
+                    // Add to rooms if building exists
+                    if (roomsByBuilding[buildingCode]) {
+                        roomsByBuilding[buildingCode].add(roomNumber);
+                        roomCount++;
+                    }
+                });
+            });
+
+            // Count buildings with rooms
+            const buildingsWithRooms = Object.keys(roomsByBuilding).filter(
+                code => roomsByBuilding[code].size > 0
+            );
+
+            statusMessage.textContent =
+                `Found ${roomCount} rooms across ${buildingsWithRooms.length} buildings.`;
+
+            console.log('Buildings with rooms:', buildingsWithRooms);
+        }
+
+        // Populate building dropdown
+        function populateBuildingDropdown() {
+            const buildingSelect = document.getElementById('buildingSelect');
+            buildingSelect.innerHTML = '<option value="">Select a building...</option>';
+
+            // Get buildings with rooms
+            const availableBuildings = buildings.filter(building =>
+                roomsByBuilding[building.Code] && roomsByBuilding[building.Code].size > 0
+            );
+
+            if (availableBuildings.length === 0) {
+                buildingSelect.innerHTML = '<option value="">No buildings with rooms found</option>';
+                document.getElementById('statusMessage').textContent = 'No buildings with rooms found.';
+                return;
+            }
+
+            // Add buildings to dropdown
+            availableBuildings
+                .sort((a, b) => a.Description.localeCompare(b.Description))
+                .forEach(building => {
+                    const option = document.createElement('option');
+                    option.value = building.Code;
+                    option.textContent = `${building.Description} (${building.Code})`;
+                    buildingSelect.appendChild(option);
+                });
+
+            // Enable the dropdown
+            buildingSelect.disabled = false;
+        }
+
+        // Handle building selection change
+        function handleBuildingChange() {
+            const buildingCode = document.getElementById('buildingSelect').value;
+            const roomSelect = document.getElementById('roomSelect');
+
+            // Clear room select
+            roomSelect.innerHTML = '<option value="">Select a room...</option>';
+
+            if (!buildingCode) {
+                roomSelect.disabled = true;
+                return;
+            }
+
+            // Get rooms for building
+            const rooms = Array.from(roomsByBuilding[buildingCode] || [])
+                .sort((a, b) => {
+                    // Sort numerically if possible
+                    const numA = parseInt(a);
+                    const numB = parseInt(b);
+                    if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+                    return a.localeCompare(b);
+                });
+
+            // Add rooms to dropdown
+            rooms.forEach(room => {
+                const option = document.createElement('option');
+                option.value = room;
+                option.textContent = room;
+                roomSelect.appendChild(option);
+            });
+
+            // Enable room select
+            roomSelect.disabled = false;
+            document.getElementById('statusMessage').textContent =
+                `${rooms.length} rooms available in ${buildingCode}.`;
+        }
+
+        // Handle room selection change
+        function handleRoomChange() {
+            const buildingCode = document.getElementById('buildingSelect').value;
+            const roomNumber = document.getElementById('roomSelect').value;
+
+            if (!buildingCode || !roomNumber) return;
+
+            // Create the full room code
+            const fullRoomCode = `${buildingCode} ${roomNumber}`;
+            document.getElementById('roomDebug').textContent = fullRoomCode;
+
+            // Find matching courses
+            const matchingCourses = courseData.filter(course => {
+                const loc1 = course['Meetings/0/Location'];
+                const loc2 = course['Meetings/1/Location'];
+
+                return (loc1 === fullRoomCode) || (loc2 === fullRoomCode);
+            });
+
+            // Update status
+            document.getElementById('statusMessage').textContent =
+                `Found ${matchingCourses.length} courses for room ${fullRoomCode}`;
+
+            // Update debug info
+            document.getElementById('coursesDebug').textContent =
+                JSON.stringify(matchingCourses.map(c => ({
+                    course: `${c.Subj} ${c.Number}`,
+                    locations: [c['Meetings/0/Location'], c['Meetings/1/Location']]
+                })), null, 2);
+        }
+    </script>
+</body>
+</html>

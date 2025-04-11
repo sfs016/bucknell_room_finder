@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug CSV Loading</title>
+    <style>
+        pre {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 5px;
+            overflow: auto;
+            max-height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug CSV and Building Data</h1>
+    <button id="loadData">Load Data</button>
+    <h2>Buildings Data</h2>
+    <pre id="buildingsOutput">Click "Load Data" to see buildings</pre>
+    <h2>CSV Data Sample (First 2 Rows)</h2>
+    <pre id="csvOutput">Click "Load Data" to see CSV sample</pre>
+    <h2>Building Rooms</h2>
+    <pre id="roomsOutput">Click "Load Data" to see rooms</pre>
+
+    <script>
+        document.getElementById('loadData').addEventListener('click', async () => {
+            try {
+                // Load buildings
+                const buildingsResponse = await fetch('buildings.json');
+                const buildings = await buildingsResponse.json();
+                document.getElementById('buildingsOutput').textContent =
+                    JSON.stringify(buildings.slice(0, 5), null, 2);
+
+                // Load course data sample
+                const courseResponse = await fetch('courseinformation 2025 (2).csv');
+                const courseText = await courseResponse.text();
+                const lines = courseText.split('\n').filter(line => line.trim());
+                document.getElementById('csvOutput').textContent =
+                    lines.slice(0, 5).join('\n');
+
+                // Process rooms (simplified)
+                const buildingRooms = {};
+                buildings.forEach(building => {
+                    buildingRooms[building.Code] = new Set();
+                });
+
+                // Manually process first 100 lines
+                for (let i = 2; i < Math.min(lines.length, 100); i++) {
+                    const line = lines[i];
+                    const values = line.split(',');
+
+                    // Look for meeting locations
+                    const location1Index = lines[1].split(',').indexOf('Meetings/0/Location');
+                    const location2Index = lines[1].split(',').indexOf('Meetings/1/Location');
+
+                    if (location1Index >= 0 && values[location1Index]) {
+                        const location = values[location1Index].replace(/"/g, '').trim();
+                        if (location) {
+                            const parts = location.split(' ');
+                            if (parts.length >= 2) {
+                                const buildingCode = parts[0];
+                                const roomNumber = parts.slice(1).join(' ');
+                                if (buildingRooms[buildingCode]) {
+                                    buildingRooms[buildingCode].add(roomNumber);
+                                }
+                            }
+                        }
+                    }
+
+                    if (location2Index >= 0 && values[location2Index]) {
+                        const location = values[location2Index].replace(/"/g, '').trim();
+                        if (location) {
+                            const parts = location.split(' ');
+                            if (parts.length >= 2) {
+                                const buildingCode = parts[0];
+                                const roomNumber = parts.slice(1).join(' ');
+                                if (buildingRooms[buildingCode]) {
+                                    buildingRooms[buildingCode].add(roomNumber);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Convert Sets to Arrays for display
+                const roomsOutput = {};
+                for (const [code, rooms] of Object.entries(buildingRooms)) {
+                    if (rooms.size > 0) {
+                        roomsOutput[code] = Array.from(rooms);
+                    }
+                }
+
+                document.getElementById('roomsOutput').textContent =
+                    JSON.stringify(roomsOutput, null, 2);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('buildingsOutput').textContent = 'Error: ' + error.message;
+            }
+        });
+    </script>
+</body>
+</html>

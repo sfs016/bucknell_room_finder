@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bucknell Room Finder</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bucknell-blue: #004B98;
+            --bucknell-blue-dark: #003b78;
+            --bucknell-orange: #FF7F32;
+            --bucknell-orange-dark: #e06d28;
+            --bucknell-gray: #5F636A;
+            --light-gray: #f8f9fa;
+            --card-bg: white;
+            --text-color: #212529;
+            --available-bg: #e1f5e1;
+            --available-hover: #d0ecd0;
+            --time-bg: #f5f5f5;
+        }
+
+        [data-bs-theme="dark"] {
+            --light-gray: #222;
+            --card-bg: #2d3238;
+            --text-color: #e9ecef;
+            --available-bg: #264026;
+            --available-hover: #305030;
+            --time-bg: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-gray);
+            transition: background-color 0.3s ease;
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1000px;
+        }
+
+        .bucknell-blue {
+            color: var(--bucknell-blue);
+        }
+
+        .bucknell-orange {
+            color: var(--bucknell-orange);
+        }
+
+        h1, h2, h3 {
+            color: var(--bucknell-blue);
+        }
+
+        .card {
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            background-color: var(--card-bg);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background-color: var(--bucknell-blue);
+            color: white;
+            font-weight: 600;
+            border-bottom: none;
+        }
+
+        .form-select, .form-control {
+            border-radius: 6px;
+            border: 1px solid #ced4da;
+            transition: all 0.2s ease;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .form-select:focus, .form-control:focus {
+            border-color: var(--bucknell-blue);
+            box-shadow: 0 0 0 0.25rem rgba(0, 75, 152, 0.25);
+        }
+
+        .btn-bucknell {
+            background-color: var(--bucknell-blue);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-bucknell:hover {
+            background-color: var(--bucknell-blue-dark);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: 80px repeat(5, 1fr);
+            grid-gap: 1px;
+            background-color: #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .schedule-grid > div {
+            background-color: var(--card-bg);
+            text-align: center;
+            padding: 8px 5px;
+            min-height: 40px;
+            font-size: 0.9rem;
+            transition: all 0.2s ease;
+        }
+
+        .header {
+            background-color: var(--bucknell-blue) !important;
+            color: white;
+            font-weight: bold;
+        }
+
+        .time-slot {
+            background-color: var(--time-bg) !important;
+            font-weight: bold;
+            color: var(--bucknell-gray);
+            white-space: nowrap;
+        }
+
+        .available {
+            background-color: var(--available-bg) !important;
+        }
+
+        .available:hover {
+            background-color: var(--available-hover) !important;
+        }
+
+        .occupied {
+            background-color: var(--bucknell-orange) !important;
+            color: white;
+            font-weight: 500;
+        }
+
+        .occupied:hover {
+            background-color: var(--bucknell-orange-dark) !important;
+            transform: scale(1.02);
+            z-index: 1;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .alert {
+            border-radius: 8px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .logo {
+            height: 40px;
+            margin-right: 10px;
+        }
+
+        .loading {
+            position: relative;
+        }
+
+        .loading::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .loading::before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(0, 75, 152, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--bucknell-blue);
+            animation: spin 1s linear infinite;
+            z-index: 2;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: var(--bucknell-blue);
+            transition: color 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            color: var(--bucknell-orange);
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        @media (max-width: 768px) {
+            .schedule-grid {
+                font-size: 0.8rem;
+                grid-template-columns: 65px repeat(5, 1fr);
+            }
+            .schedule-grid > div {
+                padding: 5px 2px;
+                min-height: 35px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .schedule-grid {
+                font-size: 0.7rem;
+                grid-template-columns: 70px repeat(5, 1fr);
+            }
+            .time-slot {
+                font-size: 0.65rem;
+                padding: 5px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4 mb-5">
+        <div class="logo-container">
+            <h1 class="mb-0">
+                <span class="bucknell-blue">Bucknell</span>
+                <span class="bucknell-orange">Room Finder</span>
+            </h1>
+            <p class="text-center text-muted mb-0 mt-1"><i>Never search for an empty classroom again</i></p>
+            <button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-10 col-xl-8 mx-auto">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-search me-2"></i>Find Available Rooms</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <label for="buildingSelect" class="form-label">Building</label>
+                                <select id="buildingSelect" class="form-select">
+                                    <option value="">Loading buildings...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="roomSelect" class="form-label">Room</label>
+                                <select id="roomSelect" class="form-select" disabled>
+                                    <option value="">First select a building...</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="alert alert-info" id="statusMessage">
+                            <i class="fas fa-info-circle me-2"></i>Loading building and course data...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0" id="selectedRoom">Select a building and room to view availability</h5>
+                        <span class="badge bg-light text-dark" id="dateDisplay"></span>
+                    </div>
+                    <div class="card-body">
+                        <div id="scheduleGrid" class="schedule-grid"></div>
+                        <div class="mt-3 small text-muted">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="me-2" style="width: 20px; height: 20px; background-color: var(--available-bg); border-radius: 4px;"></div>
+                                <span>Available</span>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <div class="me-2" style="width: 20px; height: 20px; background-color: var(--bucknell-orange); border-radius: 4px;"></div>
+                                <span>Occupied (hover to see course)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Load main app script -->
+    <script src="app.js"></script>
+
+    <!-- Date display script and dark mode toggle -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Display current date
+            const dateDisplay = document.getElementById('dateDisplay');
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            dateDisplay.textContent = new Date().toLocaleDateString('en-US', options);
+
+            // Dark mode toggle
+            const themeToggle = document.getElementById('themeToggle');
+            const icon = themeToggle.querySelector('i');
+
+            // Check for saved theme preference or use default
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-bs-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+
+            // Toggle theme on button click
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+                document.documentElement.setAttribute('data-bs-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon(newTheme);
+            });
+
+            function updateThemeIcon(theme) {
+                if (theme === 'dark') {
+                    icon.className = 'fas fa-sun';
+                } else {
+                    icon.className = 'fas fa-moon';
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

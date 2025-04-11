@@ -1,0 +1,158 @@
+[
+    {
+        "Id": "c3572028-9b27-4b5b-a180-0590b786355f",
+        "Code": "ACET",
+        "Description": "Academic East",
+        "Term": "202505"
+    },
+    {
+        "Id": "08d089d1-0e8c-422b-8408-18edc34f7ebf",
+        "Code": "ACWS",
+        "Description": "Academic West",
+        "Term": "202505"
+    },
+    {
+        "Id": "75bcb066-9ff1-4d8d-a2a4-5e474f5c0745",
+        "Code": "ANBL",
+        "Description": "Animal Behavior Lab",
+        "Term": "202505"
+    },
+    {
+        "Id": "76c4c8ba-5fd7-44fb-b740-05a59a1ac999",
+        "Code": "BARN",
+        "Description": "Art Barn",
+        "Term": "202505"
+    },
+    {
+        "Id": "0c0bac1b-7762-444a-9b49-ed442440acad",
+        "Code": "BERT",
+        "Description": "Bertrand Library",
+        "Term": "202505"
+    },
+    {
+        "Id": "05a53d38-bea2-4bcd-83d3-4b89aa147b23",
+        "Code": "BIOL",
+        "Description": "Biology Building",
+        "Term": "202505"
+    },
+    {
+        "Id": "4e103d2f-6ca0-4744-90cc-b43f69461b0a",
+        "Code": "BRKI",
+        "Description": "Breakiron Engineering",
+        "Term": "202505"
+    },
+    {
+        "Id": "fbdef7e6-8d10-45be-ac94-a108ba0aad22",
+        "Code": "BUHL",
+        "Description": "Bucknell Hall",
+        "Term": "202505"
+    },
+    {
+        "Id": "51cd4eb0-cba2-4bbe-990c-eb5483329f99",
+        "Code": "CHAP",
+        "Description": "Rooke Chapel",
+        "Term": "202505"
+    },
+    {
+        "Id": "25b4b606-a0f1-4e2a-8539-a53ef62cd047",
+        "Code": "CMTH",
+        "Description": "Campus Theatre",
+        "Term": "202505"
+    },
+    {
+        "Id": "1aede947-6f04-4bf5-b0f6-d84c42bfff68",
+        "Code": "COLE",
+        "Description": "Coleman Hall",
+        "Term": "202505"
+    },
+    {
+        "Id": "1b7f0528-caf7-4816-af9e-4cc13fc47408",
+        "Code": "COMP",
+        "Description": "Computer Center",
+        "Term": "202505"
+    },
+    {
+        "Id": "bd3a4e48-844f-4f1a-b407-a54e75505a7e",
+        "Code": "DANA",
+        "Description": "Dana Engineering",
+        "Term": "202505"
+    },
+    {
+        "Id": "2617c7ba-2d31-4b69-8d95-595a18a5c38c",
+        "Code": "HMHC",
+        "Description": "Hildreth-Mirza Hall",
+        "Term": "202505"
+    },
+    {
+        "Id": "bc9ab0c0-7893-4572-9236-9d236ce7c274",
+        "Code": "HOLM",
+        "Description": "Holmes Hall",
+        "Term": "202505"
+    },
+    {
+        "Id": "a6f27882-7a2b-4ff0-b2de-a24d31ca1b2c",
+        "Code": "LANG",
+        "Description": "Elaine Langone Center",
+        "Term": "202505"
+    },
+    {
+        "Id": "edead172-ea70-4875-8eaa-a85db903960c",
+        "Code": "MART",
+        "Description": "Marts Hall",
+        "Term": "202505"
+    },
+    {
+        "Id": "9688afdc-eb9c-4f54-9572-5078d5ec9a6e",
+        "Code": "OBSV",
+        "Description": "Observatory",
+        "Term": "202505"
+    },
+    {
+        "Id": "f27455e7-6974-44be-aec3-b5fbd8e983f2",
+        "Code": "OLIN",
+        "Description": "Olin Science",
+        "Term": "202505"
+    },
+    {
+        "Id": "40951358-58dc-43fb-b2ef-8fe42d26b013",
+        "Code": "OLRY",
+        "Description": "O'Leary Center",
+        "Term": "202505"
+    },
+    {
+        "Id": "c5edf08c-34c7-4e97-8d06-4f8e7daf506d",
+        "Code": "RCHM",
+        "Description": "Rooke Chemistry",
+        "Term": "202505"
+    },
+    {
+        "Id": "5b894d85-679a-43c6-9060-de12df141b4c",
+        "Code": "SWMU",
+        "Description": "Sigfried Weis Music Building",
+        "Term": "202505"
+    },
+    {
+        "Id": "3789e141-7040-4988-83bd-d9b409571f19",
+        "Code": "TAYL",
+        "Description": "Taylor Hall",
+        "Term": "202505"
+    },
+    {
+        "Id": "e0964417-365d-4d2c-b72c-60451425b848",
+        "Code": "TUST",
+        "Description": "Tustin Theatre",
+        "Term": "202505"
+    },
+    {
+        "Id": "33cb7cb4-5561-4192-af36-473dbffeef78",
+        "Code": "VAUG",
+        "Description": "Vaughan Literature Building",
+        "Term": "202505"
+    },
+    {
+        "Id": "57045a08-17a8-409c-a390-c284f90f6cf5",
+        "Code": "WEIS",
+        "Description": "Weis Center/Performing Arts",
+        "Term": "202505"
+    }
+]
