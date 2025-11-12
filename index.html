@@ -324,13 +324,20 @@
                     </div>
                     <div class="card-body">
                         <div class="row mb-3">
-                            <div class="col-md-6 mb-3 mb-md-0">
+                            <div class="col-md-4 mb-3 mb-md-0">
+                                <label for="semesterSelect" class="form-label">Semester</label>
+                                <select id="semesterSelect" class="form-select">
+                                    <option value="202601" selected>Fall 2025-26</option>
+                                    <option value="202605">Spring 2025-26</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3 mb-md-0">
                                 <label for="buildingSelect" class="form-label">Building</label>
                                 <select id="buildingSelect" class="form-select">
                                     <option value="">Loading buildings...</option>
                                 </select>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="roomSelect" class="form-label">Room</label>
                                 <select id="roomSelect" class="form-select" disabled>
                                     <option value="">First select a building...</option>
@@ -403,11 +410,6 @@
         });
     </script>
 
-    <!-- Vercel Analytics -->
-    <script>
-        window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
-    </script>
-    <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
 

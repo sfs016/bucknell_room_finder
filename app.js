@@ -1,9 +1,14 @@
 // Global variables
 let buildings = [];
 let courses = [];
+let currentSemester = "202601"; // Default to Fall 2025-26
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const dayShortCodes = { M: 0, T: 1, W: 2, R: 3, F: 4 };
 const timeSlots = Array.from({ length: 15 }, (_, i) => `${i + 8}:00`);
+// Use CORS proxy for development, or direct API for production
+const USE_CORS_PROXY = true; // Set to false when deployed
+const CORS_PROXY = "https://cors-anywhere.herokuapp.com/";
+const API_BASE_URL = "https://pubapps.bucknell.edu/CourseInformation/data/course/term/";
 
 // Initialize the app
 document.addEventListener("DOMContentLoaded", async () => {
@@ -21,43 +26,118 @@ document.addEventListener("DOMContentLoaded", async () => {
     buildings.forEach(b => buildingCodes[b.Code] = b.Description);
     console.log("Building codes mapping created");
 
-    // Load course data
-    document.getElementById("statusMessage").textContent = "Loading course data...";
-    try {
-      const courseResponse = await fetch("courseinformation 2025 (2).csv");
+    // Load course data from API
+    await loadCourseData(currentSemester);
+
+    // Setup event listeners
+    document.getElementById("semesterSelect").addEventListener("change", onSemesterChange);
+    document.getElementById("buildingSelect").addEventListener("change", onBuildingChange);
+    document.getElementById("roomSelect").addEventListener("change", onRoomChange);
+
+    // Initialize schedule grid
+    initializeScheduleGrid();
+  } catch (error) {
+    console.error("Error initializing app:", error);
+    document.getElementById("statusMessage").textContent = `Error: ${error.message}`;
+    document.getElementById("statusMessage").className = "alert alert-danger";
+  }
+});
+
+// Load course data from API with CORS proxy fallback
+async function loadCourseData(semester) {
+  document.getElementById("statusMessage").textContent = `Loading course data for ${getSemesterName(semester)}...`;
+  document.getElementById("statusMessage").className = "alert alert-info";
+
+  // Try API with CORS proxy
+  try {
+    let apiUrl = `${API_BASE_URL}${semester}`;
+
+    // Use CORS proxy if needed (for local development)
+    if (USE_CORS_PROXY && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+      // Try alternative CORS proxies
+      const proxies = [
+        `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`,
+        `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`
+      ];
+
+      for (const proxyUrl of proxies) {
+        try {
+          console.log(`Trying CORS proxy: ${proxyUrl}`);
+          const courseResponse = await fetch(proxyUrl, {
+            headers: {
+              'Accept': 'application/json'
+            }
+          });
+
+          if (courseResponse.ok) {
+            const courseData = await courseResponse.json();
+            console.log(`Loaded ${courseData.length} courses from API via proxy`);
+            courses = normalizeCourseData(courseData);
+            processCourseData(semester);
+            return;
+          }
+        } catch (proxyError) {
+          console.warn(`Proxy failed: ${proxyError.message}`);
+          continue;
+        }
+      }
+    } else {
+      // Direct API call (should work when deployed)
+      const courseResponse = await fetch(apiUrl);
       if (!courseResponse.ok) {
-        throw new Error(`Failed to load CSV: ${courseResponse.status} ${courseResponse.statusText}`);
+        throw new Error(`Failed to load course data: ${courseResponse.status} ${courseResponse.statusText}`);
       }
+      const courseData = await courseResponse.json();
+      console.log(`Loaded ${courseData.length} courses from API`);
+      courses = normalizeCourseData(courseData);
+      processCourseData(semester);
+      return;
+    }
 
-      const csvText = await courseResponse.text();
-      console.log(`Loaded CSV with ${csvText.length} characters`);
+    throw new Error("All API attempts failed");
+  } catch (error) {
+    console.error("Error loading course data from API:", error);
 
-      // First 100 characters for debugging
-      console.log("CSV starts with:", csvText.substring(0, 100));
-
-      // Parse CSV
-      courses = parseCSV(csvText);
-      console.log(`Successfully parsed ${courses.length} courses`);
-
-      if (courses.length === 0) {
-        throw new Error("No courses parsed from CSV");
-      }
-
-      // Show a few parsed courses for debugging
-      console.log("Sample courses:", courses.slice(0, 3));
-    } catch (csvError) {
-      console.error("Error loading CSV:", csvError);
-      document.getElementById("statusMessage").textContent = `Error loading course data: ${csvError.message}`;
-      document.getElementById("statusMessage").className = "alert alert-danger";
-
-      // Try an alternative approach with a simpler parser
-      console.log("Attempting alternative parsing method...");
-      const simpleCourses = createSampleCourses();
-      if (simpleCourses.length > 0) {
-        courses = simpleCourses;
-        console.log(`Using ${courses.length} sample courses instead`);
+    // Fallback to CSV parsing for Spring 2025 (only as last resort)
+    if (semester === "202605") {
+      try {
+        const csvResponse = await fetch("courseinformation 2025 (2).csv");
+        if (csvResponse.ok) {
+          const csvText = await csvResponse.text();
+          console.log("Falling back to CSV file");
+          courses = parseCSV(csvText);
+          if (courses.length > 0) {
+            processCourseData(semester);
+            return;
+          }
+        }
+      } catch (csvError) {
+        console.warn("CSV fallback also failed:", csvError);
       }
     }
+
+    // Final fallback to sample data
+    document.getElementById("statusMessage").textContent = `Unable to load course data. Using sample data. (CORS issue - will work when deployed)`;
+    document.getElementById("statusMessage").className = "alert alert-warning";
+
+    const simpleCourses = createSampleCourses();
+    if (simpleCourses.length > 0) {
+      courses = simpleCourses;
+      console.log(`Using ${courses.length} sample courses instead`);
+      processCourseData(semester);
+    }
+  }
+}
+
+// Process course data and update UI
+function processCourseData(semester) {
+  try {
+    if (courses.length === 0) {
+      throw new Error("No courses found for this semester");
+    }
+
+    // Show a few parsed courses for debugging
+    console.log("Sample courses:", courses.slice(0, 3));
 
     // Extract all possible room locations for debugging
     const allLocations = new Set();
@@ -70,7 +150,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       Array.from(allLocations).slice(0, 10));
 
     // Process rooms by building
-    document.getElementById("statusMessage").textContent = "Processing room data...";
     const buildingRooms = getBuildingRooms(courses, buildings);
 
     // Show rooms per building
@@ -83,23 +162,92 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.log(`${code}: ${buildingRooms[code].length} rooms`);
     });
 
-    // Populate building dropdown
+    // Reprocess rooms and update UI
     populateBuildingDropdown(buildingRooms);
 
-    // Initialize schedule grid
-    initializeScheduleGrid();
+    // Clear room selection and schedule
+    document.getElementById("roomSelect").value = "";
+    document.getElementById("roomSelect").disabled = true;
+    clearSchedule();
+    document.getElementById("selectedRoom").textContent = "Select a building and room to view availability";
 
-    // Setup event listeners
-    document.getElementById("buildingSelect").addEventListener("change", onBuildingChange);
-    document.getElementById("roomSelect").addEventListener("change", onRoomChange);
-
-    document.getElementById("statusMessage").textContent = "Ready! Select a building and room.";
+    // Always update status message
+    document.getElementById("statusMessage").textContent = `Loaded ${courses.length} courses for ${getSemesterName(semester)}. Select a building and room.`;
+    document.getElementById("statusMessage").className = "alert alert-success";
   } catch (error) {
-    console.error("Error initializing app:", error);
-    document.getElementById("statusMessage").textContent = `Error: ${error.message}`;
+    console.error("Error processing course data:", error);
+    document.getElementById("statusMessage").textContent = `Error processing data: ${error.message}`;
     document.getElementById("statusMessage").className = "alert alert-danger";
   }
-});
+}
+
+// Normalize JSON API data to match our expected format
+function normalizeCourseData(apiData) {
+  const normalizedCourses = [];
+
+  apiData.forEach(course => {
+    // Skip courses without meetings or with null locations
+    if (!course.Meetings || course.Meetings.length === 0) {
+      return;
+    }
+
+    const normalizedCourse = {
+      subject: course.Subj || "",
+      number: course.Number || "",
+      title: course.Title || "",
+      meetings: []
+    };
+
+    // Process each meeting
+    course.Meetings.forEach(meeting => {
+      // Skip meetings without location
+      if (!meeting.Location || meeting.Location.trim() === "") {
+        return;
+      }
+
+      const normalizedMeeting = {
+        location: meeting.Location.trim(),
+        start: meeting.Start || "",
+        end: meeting.End || "",
+        days: {}
+      };
+
+      // Convert day flags from "Y"/"N" to boolean
+      ["M", "T", "W", "R", "F"].forEach(day => {
+        normalizedMeeting.days[day] = meeting[day] === "Y";
+      });
+
+      normalizedCourse.meetings.push(normalizedMeeting);
+    });
+
+    // Only add courses with valid meetings
+    if (normalizedCourse.meetings.length > 0) {
+      normalizedCourses.push(normalizedCourse);
+    }
+  });
+
+  return normalizedCourses;
+}
+
+// Get semester display name
+function getSemesterName(termCode) {
+  const semesterMap = {
+    "202601": "Fall 2025-26",
+    "202605": "Spring 2025-26"
+  };
+  return semesterMap[termCode] || termCode;
+}
+
+// Handle semester change
+async function onSemesterChange() {
+  const newSemester = document.getElementById("semesterSelect").value;
+  if (newSemester === currentSemester) {
+    return; // No change
+  }
+
+  currentSemester = newSemester;
+  await loadCourseData(currentSemester);
+}
 
 // Create sample courses for testing if CSV loading fails
 function createSampleCourses() {
