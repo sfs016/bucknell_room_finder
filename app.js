@@ -2,6 +2,7 @@
 let buildings = [];
 let courses = [];
 let currentSemester = "202601"; // Default to Fall 2025-26
+let legacyRoomsCache = null;
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const dayShortCodes = { M: 0, T: 1, W: 2, R: 3, F: 4 };
 const timeSlots = Array.from({ length: 15 }, (_, i) => `${i + 8}:00`);
@@ -73,7 +74,8 @@ async function loadCourseData(semester) {
             const courseData = await courseResponse.json();
             console.log(`Loaded ${courseData.length} courses from API via proxy`);
             courses = normalizeCourseData(courseData);
-            processCourseData(semester);
+            const buildingRooms = await buildRoomMap();
+            processCourseData(semester, buildingRooms);
             return;
           }
         } catch (proxyError) {
@@ -90,7 +92,8 @@ async function loadCourseData(semester) {
       const courseData = await courseResponse.json();
       console.log(`Loaded ${courseData.length} courses from API`);
       courses = normalizeCourseData(courseData);
-      processCourseData(semester);
+      const buildingRooms = await buildRoomMap();
+      processCourseData(semester, buildingRooms);
       return;
     }
 
@@ -107,7 +110,8 @@ async function loadCourseData(semester) {
           console.log("Falling back to CSV file");
           courses = parseCSV(csvText);
           if (courses.length > 0) {
-            processCourseData(semester);
+            const buildingRooms = await buildRoomMap();
+            processCourseData(semester, buildingRooms);
             return;
           }
         }
@@ -124,13 +128,122 @@ async function loadCourseData(semester) {
     if (simpleCourses.length > 0) {
       courses = simpleCourses;
       console.log(`Using ${courses.length} sample courses instead`);
-      processCourseData(semester);
+      const buildingRooms = await buildRoomMap(true);
+      processCourseData(semester, buildingRooms);
     }
   }
 }
 
+async function buildRoomMap(skipLegacy = false) {
+  let buildingRooms = getBuildingRooms(courses, buildings);
+  if (!skipLegacy) {
+    const legacyRooms = await loadLegacyRooms();
+    mergeRoomMaps(buildingRooms, legacyRooms);
+  }
+  return buildingRooms;
+}
+
+async function loadLegacyRooms() {
+  if (legacyRoomsCache) {
+    return legacyRoomsCache;
+  }
+
+  const mergedRooms = {};
+  buildings.forEach(b => {
+    mergedRooms[b.Code] = [];
+  });
+
+  // Load legacy CSV data to capture historical rooms
+  try {
+    const response = await fetch("courseinformation 2025 (2).csv");
+    if (response.ok) {
+      const csvText = await response.text();
+      const legacyCourses = parseCSV(csvText);
+      console.log(`Loaded ${legacyCourses.length} legacy courses from CSV`);
+      const legacyRooms = getBuildingRooms(legacyCourses, buildings);
+      mergeRoomMaps(mergedRooms, legacyRooms);
+    }
+  } catch (error) {
+    console.warn("Unable to load legacy CSV rooms:", error);
+  }
+
+  // Load additional semesters to build a comprehensive room list
+  const additionalSemesters = ["202601", "202605"];
+  for (const term of additionalSemesters) {
+    try {
+      const courseData = await fetchTermCourseData(term);
+      const normalized = normalizeCourseData(courseData);
+      const roomMap = getBuildingRooms(normalized, buildings);
+      mergeRoomMaps(mergedRooms, roomMap);
+      console.log(`Merged rooms from semester ${term}`);
+    } catch (error) {
+      console.warn(`Unable to load additional semester ${term}:`, error);
+    }
+  }
+
+  legacyRoomsCache = mergedRooms;
+  return legacyRoomsCache;
+}
+
+async function fetchTermCourseData(term) {
+  const apiUrl = `${API_BASE_URL}${term}`;
+  const urls = [];
+
+  if (USE_CORS_PROXY && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    urls.push(`https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`);
+    urls.push(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`);
+  } else {
+    urls.push(apiUrl);
+  }
+
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        headers: { Accept: "application/json" }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log(`Fetched ${data.length} courses for term ${term}`);
+        return data;
+      }
+    } catch (error) {
+      console.warn(`Fetch attempt failed for ${url}:`, error);
+      continue;
+    }
+  }
+
+  throw new Error(`Unable to fetch course data for term ${term}`);
+}
+
+function mergeRoomMaps(target, source) {
+  if (!source) return;
+
+  Object.entries(source).forEach(([buildingCode, rooms]) => {
+    if (!Array.isArray(rooms) || rooms.length === 0) return;
+
+    if (!target[buildingCode]) {
+      target[buildingCode] = [];
+    }
+
+    rooms.forEach(room => {
+      if (!target[buildingCode].includes(room)) {
+        target[buildingCode].push(room);
+      }
+    });
+
+    target[buildingCode].sort((a, b) => {
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    });
+  });
+}
+
 // Process course data and update UI
-function processCourseData(semester) {
+function processCourseData(semester, buildingRooms) {
   try {
     if (courses.length === 0) {
       throw new Error("No courses found for this semester");
@@ -148,9 +261,6 @@ function processCourseData(semester) {
     });
     console.log(`Found ${allLocations.size} unique locations, sample:`,
       Array.from(allLocations).slice(0, 10));
-
-    // Process rooms by building
-    const buildingRooms = getBuildingRooms(courses, buildings);
 
     // Show rooms per building
     const buildingsWithRooms = Object.keys(buildingRooms).filter(code =>
@@ -184,10 +294,15 @@ function processCourseData(semester) {
 // Normalize JSON API data to match our expected format
 function normalizeCourseData(apiData) {
   const normalizedCourses = [];
+  let skippedNoMeetings = 0;
+  let skippedNoLocation = 0;
+  let totalMeetings = 0;
+  let validMeetings = 0;
 
   apiData.forEach(course => {
-    // Skip courses without meetings or with null locations
+    // Skip courses without meetings
     if (!course.Meetings || course.Meetings.length === 0) {
+      skippedNoMeetings++;
       return;
     }
 
@@ -200,13 +315,17 @@ function normalizeCourseData(apiData) {
 
     // Process each meeting
     course.Meetings.forEach(meeting => {
-      // Skip meetings without location
-      if (!meeting.Location || meeting.Location.trim() === "") {
+      totalMeetings++;
+
+      // Skip meetings without location (handle null, undefined, empty string)
+      const location = meeting.Location;
+      if (!location || location === null || location === undefined || String(location).trim() === "" || String(location).toLowerCase() === "null") {
+        skippedNoLocation++;
         return;
       }
 
       const normalizedMeeting = {
-        location: meeting.Location.trim(),
+        location: String(location).trim(),
         start: meeting.Start || "",
         end: meeting.End || "",
         days: {}
@@ -218,6 +337,7 @@ function normalizeCourseData(apiData) {
       });
 
       normalizedCourse.meetings.push(normalizedMeeting);
+      validMeetings++;
     });
 
     // Only add courses with valid meetings
@@ -225,6 +345,9 @@ function normalizeCourseData(apiData) {
       normalizedCourses.push(normalizedCourse);
     }
   });
+
+  console.log(`Normalized ${normalizedCourses.length} courses from ${apiData.length} total courses`);
+  console.log(`Meetings: Total=${totalMeetings}, Valid=${validMeetings}, Skipped (no location)=${skippedNoLocation}, Skipped (no meetings)=${skippedNoMeetings}`);
 
   return normalizedCourses;
 }
@@ -458,8 +581,12 @@ function parseCSVLine(line) {
 
 // Extract rooms by building from courses
 function getBuildingRooms(courses, buildings) {
-  // Create a set of valid building codes
+  // Create a set of valid building codes (case-insensitive lookup)
   const validBuildingCodes = new Set(buildings.map(b => b.Code));
+  const buildingCodeMap = {}; // Map for case-insensitive lookup
+  buildings.forEach(b => {
+    buildingCodeMap[b.Code.toUpperCase()] = b.Code;
+  });
   console.log(`Valid building codes: ${Array.from(validBuildingCodes).join(', ')}`);
 
   // Initialize room map
@@ -473,27 +600,49 @@ function getBuildingRooms(courses, buildings) {
   let validLocations = 0;
   let invalidLocations = 0;
   let uniqueRooms = 0;
+  const invalidLocationSamples = new Set();
 
   // Extract rooms from courses
   courses.forEach(course => {
     course.meetings.forEach(meeting => {
-      const location = meeting.location?.trim();
+      let location = meeting.location?.trim();
       totalLocations++;
 
-      if (!location) return;
+      if (!location || location === "" || location === "null") return;
 
-      // Split location into building and room
+      // Clean up location - remove extra spaces, handle various formats
+      location = location.replace(/\s+/g, " ").trim();
+
+      // Try different parsing strategies
+      let buildingCode = null;
+      let roomNumber = null;
+
+      // Strategy 1: Split by space (standard format: "DANA 113")
       const parts = location.split(" ");
-      if (parts.length < 2) {
-        invalidLocations++;
-        return;
+      if (parts.length >= 2) {
+        const potentialCode = parts[0].toUpperCase();
+        // Check if first part matches a building code (case-insensitive)
+        if (buildingCodeMap[potentialCode]) {
+          buildingCode = buildingCodeMap[potentialCode];
+          roomNumber = parts.slice(1).join(" ");
+        }
       }
 
-      const buildingCode = parts[0];
-      const roomNumber = parts.slice(1).join(" ");
+      // Strategy 2: If no match, try to find building code at start
+      if (!buildingCode) {
+        // Try matching building codes of different lengths
+        for (let i = 1; i <= location.length; i++) {
+          const potentialCode = location.substring(0, i).toUpperCase();
+          if (buildingCodeMap[potentialCode]) {
+            buildingCode = buildingCodeMap[potentialCode];
+            roomNumber = location.substring(i).trim();
+            break;
+          }
+        }
+      }
 
-      // Check if this is a valid building
-      if (validBuildingCodes.has(buildingCode)) {
+      // If we found a valid building code
+      if (buildingCode && roomNumber) {
         validLocations++;
 
         // Add room if it's not already in the list
@@ -503,11 +652,24 @@ function getBuildingRooms(courses, buildings) {
         }
       } else {
         invalidLocations++;
+        if (invalidLocationSamples.size < 10) {
+          invalidLocationSamples.add(location);
+        }
       }
     });
   });
 
   console.log(`Room extraction: Total=${totalLocations}, Valid=${validLocations}, Invalid=${invalidLocations}, Unique=${uniqueRooms}`);
+  if (invalidLocationSamples.size > 0) {
+    console.log(`Sample invalid locations: ${Array.from(invalidLocationSamples).join(', ')}`);
+  }
+
+  // Log rooms per building for verification
+  Object.keys(buildingRooms).forEach(code => {
+    if (buildingRooms[code].length > 0) {
+      console.log(`${code}: ${buildingRooms[code].length} rooms`);
+    }
+  });
 
   // Sort room numbers
   Object.keys(buildingRooms).forEach(code => {
@@ -518,7 +680,8 @@ function getBuildingRooms(courses, buildings) {
       if (!isNaN(numA) && !isNaN(numB)) {
         return numA - numB;
       }
-      return a.localeCompare(b);
+      // Try alphanumeric sorting (e.g., "113A" vs "113B")
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
     });
   });
 
