@@ -2,19 +2,19 @@
 
 Find open classrooms on Bucknell’s campus fast. This single-page app pulls live course meeting data, maps it to buildings/rooms, and paints a weekly schedule so you can spot free time slots at a glance.
 
+## Screenshot
+Screenshot lives at `docs/ss.png` and renders here:
+
+![Bucknell Room Finder screenshot](docs/ss.png)
+
 ## Live  on Vercel
-- Live site: **https://bucknell-room-finder.vercel.app/**
+- Live site: **https://bucknell-room-finder.vercel.app/**`
 
 ## Quick Start
 1. Install deps (only Vercel CLI analytics helpers are listed):
    `npm install`
 2. Run locally (only `npx serve .` works reliably for CORS):
-   `npx serve .`
-
-## Screenshot
-Screenshot lives at `docs/ss.png` and renders here:
-
-![Bucknell Room Finder screenshot](docs/ss.png)
+   `npx serve .
 
 ## Highlights
 - Clean “availability first” schedule grid with Bucknell branding and dark mode toggle.
