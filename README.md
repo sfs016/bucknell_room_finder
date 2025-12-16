@@ -5,21 +5,21 @@ Find open classrooms on Bucknell’s campus fast. This single-page app pulls liv
 ## Live  on Vercel
 - Live site: **https://bucknell-room-finder.vercel.app/**
 
-## Highlights
-- Clean “availability first” schedule grid with Bucknell branding and dark mode toggle.
-- Live course data with fall/spring term selector, room filtering, and graceful fallbacks (CSV/sample data if CORS blocks the API locally).
-- Caches legacy room lists across terms to keep dropdowns complete, even when API data is sparse.
-
 ## Quick Start
 1. Install deps (only Vercel CLI analytics helpers are listed):
    `npm install`
 2. Run locally (only `npx serve .` works reliably for CORS):
    `npx serve .`
-   
+
 ## Screenshot
 Screenshot lives at `docs/ss.png` and renders here:
 
 ![Bucknell Room Finder screenshot](docs/ss.png)
+
+## Highlights
+- Clean “availability first” schedule grid with Bucknell branding and dark mode toggle.
+- Live course data with fall/spring term selector, room filtering, and graceful fallbacks (CSV/sample data if CORS blocks the API locally).
+- Caches legacy room lists across terms to keep dropdowns complete, even when API data is sparse.
 
 ## Project Layout
 - `index.html` – UI markup, Bootstrap/Font Awesome imports, dark-mode toggle.
