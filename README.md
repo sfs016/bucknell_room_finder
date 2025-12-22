@@ -8,7 +8,7 @@ Screenshot lives at `docs/ss.png` and renders here:
 ![Bucknell Room Finder screenshot](docs/ss.png)
 
 ## Live  on Vercel
-- Live site: **https://bucknell-room-finder.vercel.app/**`
+- Live site: https://bucknell-room-finder.vercel.app/
 
 ## Quick Start
 1. Install deps (only Vercel CLI analytics helpers are listed):
