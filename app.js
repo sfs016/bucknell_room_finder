@@ -1,7 +1,7 @@
 // Global variables
 let buildings = [];
 let courses = [];
-let currentSemester = "202601"; // Default to Fall 2025-26
+let currentSemester = "202605"; // Default to Fall 2025-26
 let legacyRoomsCache = null;
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const dayShortCodes = { M: 0, T: 1, W: 2, R: 3, F: 4 };
